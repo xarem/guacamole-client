@@ -20,6 +20,7 @@
 package org.apache.guacamole.auth.ldap.connection;
 
 import com.google.inject.Inject;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -149,8 +150,21 @@ public class ConnectionService {
             // looking for direct membership in the guacConfigGroup
             // and possibly any groups the user is a member of that are
             // referred to in the seeAlso attribute of the guacConfigGroup.
-            List<Entry> results = queryService.search(ldapConfig, ldapConfig.getLDAPConnection(),
-                    configurationBaseDN, connectionSearchFilter, 0, GUAC_CONFIG_LDAP_ATTRIBUTES);
+            List<Entry> results = new ArrayList<>();
+
+            // Get all entries of LDAP
+            int searchHop = 0;
+            while(true) {
+                List<Entry> pagedResult = queryService.search(ldapConfig, ldapConfig.getLDAPConnection(),
+                        configurationBaseDN, connectionSearchFilter, searchHop, GUAC_CONFIG_LDAP_ATTRIBUTES);
+
+                if (pagedResult.size() > 0) {
+                    results.addAll(pagedResult);
+                    searchHop++;
+                } else {
+                    break;
+                }
+            }
 
             // Return a map of all readable connections
             return queryService.asMap(results, (entry) -> {
